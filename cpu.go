@@ -12,6 +12,8 @@ func startCpuUsageReporting(stopChan chan bool) chan cpuInfo {
 	cpuChannel := make(chan cpuInfo)
 
 	go func() {
+		log.Println("CPU reporting started")
+
 		for {
 			select {
 			case <-stopChan:
@@ -47,6 +49,8 @@ func startLoadAverageReporting(stopChan chan bool) chan loadInfo {
 	loadChannel := make(chan loadInfo)
 
 	go func() {
+		log.Println("Load average reporting started")
+
 		for {
 			select {
 			case <-stopChan:

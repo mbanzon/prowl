@@ -26,6 +26,8 @@ func handleData(cpuIn chan cpuInfo, loadIn chan loadInfo, stopChan chan bool) ch
 	data := output{}
 
 	go func() {
+		log.Println("Data handling started")
+
 		for {
 			select {
 			case <-stopChan:

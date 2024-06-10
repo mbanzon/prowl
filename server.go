@@ -27,6 +27,8 @@ func startServer(port int, in chan output) *http.Server {
 	server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
 
 	go func() {
+		log.Println("Server started on port", port)
+
 		for {
 			err := server.ListenAndServe()
 			if err != nil && err != http.ErrServerClosed {
