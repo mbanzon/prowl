@@ -29,8 +29,11 @@ func main() {
 	// start the CPU reporting
 	cpuChannel := startCpuUsageReporting(stopChan)
 
+	// start the load average reporting
+	loadChannel := startLoadAverageReporting(stopChan)
+
 	// handle the data
-	dataChannel := handleData(cpuChannel, stopChan)
+	dataChannel := handleData(cpuChannel, loadChannel, stopChan)
 
 	// start the server
 	server := startServer(port, dataChannel)

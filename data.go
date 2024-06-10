@@ -6,7 +6,8 @@ import (
 )
 
 type output struct {
-	Cpu cpuInfo `json:"cpu"`
+	Cpu  cpuInfo  `json:"cpu"`
+	Load loadInfo `json:"load"`
 }
 
 type cpuInfo struct {
@@ -14,7 +15,13 @@ type cpuInfo struct {
 	Cores []float64 `json:"cores"`
 }
 
-func handleData(cpuIn chan cpuInfo, stopChan chan bool) chan output {
+type loadInfo struct {
+	Load1  float64 `json:"load1"`
+	Load5  float64 `json:"load5"`
+	Load15 float64 `json:"load15"`
+}
+
+func handleData(cpuIn chan cpuInfo, loadIn chan loadInfo, stopChan chan bool) chan output {
 	out := make(chan output)
 	data := output{}
 
@@ -27,6 +34,8 @@ func handleData(cpuIn chan cpuInfo, stopChan chan bool) chan output {
 				return
 			case cpuData := <-cpuIn:
 				data.Cpu = cpuData
+			case loadData := <-loadIn:
+				data.Load = loadData
 			case <-time.After(1 * time.Second):
 				out <- data
 			}
