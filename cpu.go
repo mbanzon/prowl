@@ -1,22 +1,27 @@
 package main
 
 import (
+	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/load"
 )
 
-func startCpuUsageReporting(stopChan chan bool) chan cpuInfo {
+func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
 	cpuChannel := make(chan cpuInfo)
+	wg := ctx.Value(wgKey).(*sync.WaitGroup)
+	wg.Add(1)
 
 	go func() {
 		log.Println("CPU reporting started")
+		defer wg.Done()
 
 		for {
 			select {
-			case <-stopChan:
+			case <-ctx.Done():
 				log.Println("CPU reporting stopped")
 				return
 			case <-time.After(1 * time.Second):
@@ -45,15 +50,18 @@ func reportCpuUsage(cpuChannel chan cpuInfo) {
 	}
 }
 
-func startLoadAverageReporting(stopChan chan bool) chan loadInfo {
+func startLoadAverageReporting(ctx context.Context) chan loadInfo {
 	loadChannel := make(chan loadInfo)
+	wg := ctx.Value(wgKey).(*sync.WaitGroup)
+	wg.Add(1)
 
 	go func() {
 		log.Println("Load average reporting started")
+		defer wg.Done()
 
 		for {
 			select {
-			case <-stopChan:
+			case <-ctx.Done():
 				log.Println("Load average reporting stopped")
 				return
 			case <-time.After(1 * time.Second):

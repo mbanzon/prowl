@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -21,16 +23,19 @@ type loadInfo struct {
 	Load15 float64 `json:"load15"`
 }
 
-func handleData(cpuIn chan cpuInfo, loadIn chan loadInfo, stopChan chan bool) chan output {
+func handleData(cpuIn chan cpuInfo, loadIn chan loadInfo, ctx context.Context) chan output {
 	out := make(chan output)
 	data := output{}
+	wg := ctx.Value(wgKey).(*sync.WaitGroup)
+	wg.Add(1)
 
 	go func() {
 		log.Println("Data handling started")
+		defer wg.Done()
 
 		for {
 			select {
-			case <-stopChan:
+			case <-ctx.Done():
 				close(out)
 				log.Println("Data handling stopped")
 				return
