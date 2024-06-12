@@ -58,7 +58,6 @@ func getServerPortNumber() int {
 
 	flag.IntVar(&port, "port", 5001, "port to run the server on")
 	flag.Parse()
-	flag.Parse()
 
 	if port < 1024 {
 		log.Fatal("port number must be greater than 1024:", port)
@@ -67,13 +66,9 @@ func getServerPortNumber() int {
 }
 
 func setupDataHandling(ctx context.Context) chan output {
-	// start the CPU reporting
-	cpuChannel := startCpuUsageReporting(ctx)
-	// start the load average reporting
-	loadChannel := startLoadAverageReporting(ctx)
-
-	// handle the data
-	dataChannel := handleData(cpuChannel, loadChannel, ctx)
-
-	return dataChannel
+	return handleData(
+		startCpuUsageReporting(ctx),
+		startLoadAverageReporting(ctx),
+		ctx,
+	)
 }
