@@ -23,11 +23,14 @@ type loadInfo struct {
 	Load15 float64 `json:"load15"`
 }
 
-func handleData(cpuIn chan cpuInfo, loadIn chan loadInfo, ctx context.Context) chan output {
+func handleData(ctx context.Context) chan output {
 	out := make(chan output)
 	data := output{}
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
 	wg.Add(1)
+
+	cpuIn := startCpuUsageReporting(ctx)
+	loadIn := startLoadAverageReporting(ctx)
 
 	go func() {
 		log.Println("Data handling started")

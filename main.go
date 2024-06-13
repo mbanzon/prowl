@@ -19,7 +19,7 @@ const (
 func main() {
 	port := getServerPortNumber()
 	sig, ctx, cancel, wg := setupSync()
-	dataChannel := setupDataHandling(ctx)
+	dataChannel := handleData(ctx)
 	server := startServer(port, dataChannel)
 
 	<-sig
@@ -63,12 +63,4 @@ func getServerPortNumber() int {
 		log.Fatal("port number must be greater than 1024:", port)
 	}
 	return port
-}
-
-func setupDataHandling(ctx context.Context) chan output {
-	return handleData(
-		startCpuUsageReporting(ctx),
-		startLoadAverageReporting(ctx),
-		ctx,
-	)
 }
