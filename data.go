@@ -11,6 +11,7 @@ type output struct {
 	Cpu    cpuInfo    `json:"cpu"`
 	Load   loadInfo   `json:"load"`
 	Memory memoryInfo `json:"memory"`
+	Disks  []diskInfo `json:"disks"`
 }
 
 type cpuInfo struct {
@@ -31,6 +32,14 @@ type memoryInfo struct {
 	UsedPercent float64 `json:"used_percent"`
 }
 
+type diskInfo struct {
+	Device     string `json:"device"`
+	Mountpoint string `json:"mountpoint"`
+	Total      uint64 `json:"total"`
+	Free       uint64 `json:"free"`
+	Used       uint64 `json:"used"`
+}
+
 func handleData(ctx context.Context) chan output {
 	out := make(chan output)
 	data := output{}
@@ -40,6 +49,7 @@ func handleData(ctx context.Context) chan output {
 	cpuIn := startCpuUsageReporting(ctx)
 	loadIn := startLoadAverageReporting(ctx)
 	memoryIn := startMemoryUsageReporting(ctx)
+	diskIn := startDiskUsageReporting(ctx)
 
 	go func() {
 		log.Println("Data handling started")
@@ -57,6 +67,8 @@ func handleData(ctx context.Context) chan output {
 				data.Load = loadData
 			case memoryData := <-memoryIn:
 				data.Memory = memoryData
+			case diskData := <-diskIn:
+				data.Disks = diskData
 			case <-time.After(1 * time.Second):
 				out <- data
 			}
