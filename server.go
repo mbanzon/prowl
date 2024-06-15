@@ -32,6 +32,12 @@ func startServer(port int, in chan output) *http.Server {
 		w.Write(cachedData)
 	})
 
+	http.HandleFunc("/r", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Refresh", "5")
+		w.Write(cachedData)
+	})
+
 	server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
 
 	go func() {
