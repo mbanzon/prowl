@@ -9,11 +9,19 @@ import (
 )
 
 func startServer(port int, in chan output) *http.Server {
-	data := output{}
+	cachedData := []byte("{}")
 
 	go func() {
+		data := output{}
+
 		for d := range in {
 			data = d
+			jsonData, err := json.MarshalIndent(data, "", "\t")
+			if err != nil {
+				log.Println("Error marshalling data:", err)
+				continue
+			}
+			cachedData = jsonData
 		}
 
 		log.Println("Server data receiver stopped")
@@ -21,9 +29,7 @@ func startServer(port int, in chan output) *http.Server {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		encoder := json.NewEncoder(w)
-		encoder.SetIndent("", "\t")
-		encoder.Encode(data)
+		w.Write(cachedData)
 	})
 
 	server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
