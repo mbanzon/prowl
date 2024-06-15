@@ -12,6 +12,7 @@ type output struct {
 	Load   loadInfo   `json:"load"`
 	Memory memoryInfo `json:"memory"`
 	Disks  []diskInfo `json:"disks"`
+	Time   int64      `json:"time"`
 }
 
 type cpuInfo struct {
@@ -70,6 +71,7 @@ func handleData(ctx context.Context) chan output {
 			case diskData := <-diskIn:
 				data.Disks = diskData
 			case <-time.After(1 * time.Second):
+				data.Time = time.Now().Unix()
 				out <- data
 			}
 		}
