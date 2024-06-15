@@ -21,7 +21,9 @@ func startServer(port int, in chan output) *http.Server {
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(data)
+		encoder := json.NewEncoder(w)
+		encoder.SetIndent("", "\t")
+		encoder.Encode(data)
 	})
 
 	server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
