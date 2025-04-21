@@ -30,11 +30,14 @@ jobs:
         run: go test -v ./...
 
       # Upload the build artifact
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: prowl.zip
-          path: ./prowl
+    #   - name: Upload build artifact
+    #     uses: actions/upload-artifact@v4
+    #     with:
+    #       name: prowl.zip
+    #       path: ./prowl
+
+      - name: Pack the thing
+        run: zip prowl-linux-x64.zip
 
       # Attach artifacts to the release
       - name: Upload artifacts to release
@@ -42,5 +45,5 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: .
-          asset_name: prowl.zip
+          asset_name: prowl-linux-x64.zip
           asset_content_type: application/zip
