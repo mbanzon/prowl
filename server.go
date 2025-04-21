@@ -8,7 +8,9 @@ import (
 	"time"
 )
 
-func startServer(port int, in chan output) *http.Server {
+const secretKey string = "secret"
+
+func startServer(port int, secret string, in chan output) *http.Server {
 	cachedData := []byte("{}")
 
 	go func() {
@@ -27,16 +29,30 @@ func startServer(port int, in chan output) *http.Server {
 		log.Println("Server data receiver stopped")
 	}()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	secureWrapper := func(f http.HandlerFunc) http.HandlerFunc {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if secret != "" {
+				passedSecret := r.URL.Query().Get(secretKey)
+				if secret != passedSecret {
+					http.Error(w, "unauthorized", http.StatusUnauthorized)
+					return
+				}
+			}
+
+			f(w, r)
+		})
+	}
+
+	http.HandleFunc("/", secureWrapper(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(cachedData)
-	})
+	}))
 
-	http.HandleFunc("/r", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/r", secureWrapper(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Refresh", "5")
 		w.Write(cachedData)
-	})
+	}))
 
 	server := &http.Server{Addr: fmt.Sprintf(":%d", port)}
 

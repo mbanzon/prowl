@@ -13,14 +13,22 @@ import (
 type wgKeyType string
 
 const (
-	wgKey wgKeyType = "waitGroup"
+	wgKey        wgKeyType = "waitGroup"
+	secretKeyEnv string    = "PROWL_SECRET"
 )
 
 func main() {
-	port := getServerPortNumber()
+	port := flag.Int("port", 5001, "port to run the server on")
+	protected := flag.Bool("protect", false, "set to true if the server access should be protected")
+	protectionKey := flag.String("secret", "", "should be set (or set through environment) if you use server access protection")
+	flag.Parse()
+
+	validatePort(*port)
+	secret := validateProtection(*protected, *protectionKey)
+
 	sig, ctx, cancel, wg := setupSync()
 	dataChannel := handleData(ctx)
-	server := startServer(port, dataChannel)
+	server := startServer(*port, secret, dataChannel)
 
 	<-sig
 	log.Println("Shutting down...")
@@ -53,14 +61,26 @@ func setupSync() (chan os.Signal, context.Context, context.CancelFunc, *sync.Wai
 	return sig, ctx, cancel, wg
 }
 
-func getServerPortNumber() int {
-	port := -1
-
-	flag.IntVar(&port, "port", 5001, "port to run the server on")
-	flag.Parse()
-
+func validatePort(port int) {
 	if port < 1024 {
 		log.Fatal("port number must be greater than 1024:", port)
 	}
-	return port
+}
+
+func validateProtection(protected bool, key string) string {
+	if !protected {
+		return ""
+	}
+
+	if key != "" {
+		return key
+	}
+
+	envSecret := os.Getenv(secretKeyEnv)
+	if envSecret != "" {
+		return envSecret
+	}
+
+	log.Fatal("no secret given with protection enabled")
+	return ""
 }
