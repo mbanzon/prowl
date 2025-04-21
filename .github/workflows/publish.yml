@@ -29,16 +29,15 @@ jobs:
       - name: Test
         run: go test -v ./...
 
-      # Upload the build artifact
-    #   - name: Upload build artifact
-    #     uses: actions/upload-artifact@v4
-    #     with:
-    #       name: prowl.zip
-    #       path: ./prowl
-
       - name: Pack the thing
         run: zip prowl-linux-x64.zip ./prowl
-
+        
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+            name: prowl-linux-x64.zip
+            path: ./prowl-linux-x64.zip
+    
       # Attach artifacts to the release
       - name: Upload artifacts to release
         uses: actions/upload-release-asset@v1
