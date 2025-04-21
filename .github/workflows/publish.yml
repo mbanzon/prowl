@@ -46,3 +46,5 @@ jobs:
           asset_path: ./prowl-linux-x64.zip
           asset_name: prowl-linux-x64.zip
           asset_content_type: application/zip
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
