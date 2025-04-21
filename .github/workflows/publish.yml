@@ -37,7 +37,7 @@ jobs:
     #       path: ./prowl
 
       - name: Pack the thing
-        run: zip prowl-linux-x64.zip
+        run: zip prowl-linux-x64.zip ./prowl
 
       # Attach artifacts to the release
       - name: Upload artifacts to release
