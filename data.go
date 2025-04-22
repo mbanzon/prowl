@@ -11,6 +11,7 @@ type output struct {
 	Cpu    cpuInfo    `json:"cpu"`
 	Load   loadInfo   `json:"load"`
 	Memory memoryInfo `json:"memory"`
+	Swap   memoryInfo `json:"swap"`
 	Disks  []diskInfo `json:"disks"`
 	Time   int64      `json:"time"`
 }
@@ -49,7 +50,7 @@ func handleData(ctx context.Context) chan output {
 
 	cpuIn := startCpuUsageReporting(ctx)
 	loadIn := startLoadAverageReporting(ctx)
-	memoryIn := startMemoryUsageReporting(ctx)
+	memoryIn, swapIn := startMemoryUsageReporting(ctx)
 	diskIn := startDiskUsageReporting(ctx)
 
 	go func() {
@@ -68,6 +69,8 @@ func handleData(ctx context.Context) chan output {
 				data.Load = loadData
 			case memoryData := <-memoryIn:
 				data.Memory = memoryData
+			case swapData := <-swapIn:
+				data.Swap = swapData
 			case diskData := <-diskIn:
 				data.Disks = diskData
 			case <-time.After(1 * time.Second):

@@ -9,8 +9,9 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
-func startMemoryUsageReporting(ctx context.Context) chan memoryInfo {
+func startMemoryUsageReporting(ctx context.Context) (chan memoryInfo, chan memoryInfo) {
 	memoryChannel := make(chan memoryInfo)
+	swapChannel := make(chan memoryInfo)
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
 	wg.Add(1)
 
@@ -25,11 +26,12 @@ func startMemoryUsageReporting(ctx context.Context) chan memoryInfo {
 				return
 			case <-time.After(1 * time.Second):
 				reportMemoryUsage(memoryChannel)
+				reportSwapUsage(swapChannel)
 			}
 		}
 	}()
 
-	return memoryChannel
+	return memoryChannel, swapChannel
 }
 
 func reportMemoryUsage(memoryChannel chan memoryInfo) {
@@ -43,5 +45,19 @@ func reportMemoryUsage(memoryChannel chan memoryInfo) {
 		Used:        memory.Used,
 		Free:        memory.Free,
 		UsedPercent: memory.UsedPercent,
+	}
+}
+
+func reportSwapUsage(swapChannel chan memoryInfo) {
+	swap, err := mem.SwapMemory()
+	if err != nil {
+		log.Println("error getting swap usage:", err)
+	}
+
+	swapChannel <- memoryInfo{
+		Total:       swap.Total,
+		Used:        swap.Used,
+		Free:        swap.Free,
+		UsedPercent: swap.UsedPercent,
 	}
 }
