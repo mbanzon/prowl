@@ -73,10 +73,10 @@ func handleData(ctx context.Context) chan output {
 				data.Swap = swapData
 			case diskData := <-diskIn:
 				data.Disks = diskData
-			case <-time.After(1 * time.Second):
-				data.Time = time.Now().Unix()
-				out <- data
 			}
+
+			data.Time = time.Now().Unix()
+			out <- data
 		}
 	}()
 
