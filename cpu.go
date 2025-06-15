@@ -11,6 +11,7 @@ import (
 )
 
 func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
+	minimumPauseTime := 1 * time.Second
 	cpuChannel := make(chan cpuInfo)
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
 	wg.Add(1)
@@ -24,8 +25,11 @@ func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
 			case <-ctx.Done():
 				log.Println("CPU reporting stopped")
 				return
-			case <-time.After(1 * time.Second):
-				reportCpuUsage(cpuChannel)
+			case <-time.After(minimumPauseTime):
+				requestedPauseTime := reportCpuUsage(cpuChannel)
+				if requestedPauseTime > minimumPauseTime {
+					minimumPauseTime = requestedPauseTime
+				}
 			}
 		}
 	}()
@@ -33,7 +37,9 @@ func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
 	return cpuChannel
 }
 
-func reportCpuUsage(cpuChannel chan cpuInfo) {
+func reportCpuUsage(cpuChannel chan cpuInfo) (requestedPauseTime time.Duration) {
+	startTime := time.Now()
+
 	cpuUsages, err := cpu.Percent(0, true)
 	if err != nil {
 		log.Println("error getting CPU usage:", err)
@@ -48,9 +54,12 @@ func reportCpuUsage(cpuChannel chan cpuInfo) {
 		Usage: combinedUsage[0],
 		Cores: cpuUsages,
 	}
+
+	return 2 * time.Now().Sub(startTime)
 }
 
 func startLoadAverageReporting(ctx context.Context) chan loadInfo {
+	minimumPauseTime := 1 * time.Second
 	loadChannel := make(chan loadInfo)
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
 	wg.Add(1)
@@ -64,8 +73,11 @@ func startLoadAverageReporting(ctx context.Context) chan loadInfo {
 			case <-ctx.Done():
 				log.Println("Load average reporting stopped")
 				return
-			case <-time.After(1 * time.Second):
-				reportLoadAverage(loadChannel)
+			case <-time.After(minimumPauseTime):
+				requestedPauseTime := reportLoadAverage(loadChannel)
+				if requestedPauseTime > minimumPauseTime {
+					minimumPauseTime = requestedPauseTime
+				}
 			}
 		}
 	}()
@@ -73,7 +85,9 @@ func startLoadAverageReporting(ctx context.Context) chan loadInfo {
 	return loadChannel
 }
 
-func reportLoadAverage(loadChannel chan loadInfo) {
+func reportLoadAverage(loadChannel chan loadInfo) (requestedPauseTime time.Duration) {
+	startTime := time.Now()
+
 	load, err := load.Avg()
 	if err != nil {
 		log.Println("error getting load average:", err)
@@ -84,4 +98,6 @@ func reportLoadAverage(loadChannel chan loadInfo) {
 		Load5:  load.Load5,
 		Load15: load.Load15,
 	}
+
+	return 2 * time.Now().Sub(startTime)
 }

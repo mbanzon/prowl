@@ -9,9 +9,9 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
-func startMemoryUsageReporting(ctx context.Context) (chan memoryInfo, chan memoryInfo) {
+func startMemoryUsageReporting(ctx context.Context) chan memoryInfo {
+	minimumPauseTime := 1 * time.Second
 	memoryChannel := make(chan memoryInfo)
-	swapChannel := make(chan memoryInfo)
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
 	wg.Add(1)
 
@@ -24,17 +24,47 @@ func startMemoryUsageReporting(ctx context.Context) (chan memoryInfo, chan memor
 			case <-ctx.Done():
 				log.Println("Memory reporting stopped")
 				return
-			case <-time.After(1 * time.Second):
-				reportMemoryUsage(memoryChannel)
-				reportSwapUsage(swapChannel)
+			case <-time.After(minimumPauseTime):
+				requestedPauseTime := reportMemoryUsage(memoryChannel)
+				if requestedPauseTime > minimumPauseTime {
+					minimumPauseTime = requestedPauseTime
+				}
 			}
 		}
 	}()
 
-	return memoryChannel, swapChannel
+	return memoryChannel
 }
 
-func reportMemoryUsage(memoryChannel chan memoryInfo) {
+func startSwapUsageReporting(ctx context.Context) chan memoryInfo {
+	minimumPauseTime := 1 * time.Second
+	swapChannel := make(chan memoryInfo)
+	wg := ctx.Value(wgKey).(*sync.WaitGroup)
+	wg.Add(1)
+
+	go func() {
+		log.Println("Swap reporting started")
+		defer wg.Done()
+
+		for {
+			select {
+			case <-ctx.Done():
+				log.Println("Swap reporting stopped")
+				return
+			case <-time.After(minimumPauseTime):
+				requestedPauseTime := reportSwapUsage(swapChannel)
+				if requestedPauseTime > minimumPauseTime {
+					minimumPauseTime = requestedPauseTime
+				}
+			}
+		}
+	}()
+
+	return swapChannel
+}
+
+func reportMemoryUsage(memoryChannel chan memoryInfo) time.Duration {
+	startTime := time.Now()
 	memory, err := mem.VirtualMemory()
 	if err != nil {
 		log.Println("error getting memory usage:", err)
@@ -46,9 +76,12 @@ func reportMemoryUsage(memoryChannel chan memoryInfo) {
 		Free:        memory.Free,
 		UsedPercent: memory.UsedPercent,
 	}
+
+	return 2 * time.Now().Sub(startTime)
 }
 
-func reportSwapUsage(swapChannel chan memoryInfo) {
+func reportSwapUsage(swapChannel chan memoryInfo) time.Duration {
+	startTime := time.Now()
 	swap, err := mem.SwapMemory()
 	if err != nil {
 		log.Println("error getting swap usage:", err)
@@ -60,4 +93,6 @@ func reportSwapUsage(swapChannel chan memoryInfo) {
 		Free:        swap.Free,
 		UsedPercent: swap.UsedPercent,
 	}
+
+	return 2 * time.Now().Sub(startTime)
 }

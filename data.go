@@ -50,7 +50,8 @@ func handleData(ctx context.Context) chan output {
 
 	cpuIn := startCpuUsageReporting(ctx)
 	loadIn := startLoadAverageReporting(ctx)
-	memoryIn, swapIn := startMemoryUsageReporting(ctx)
+	memoryIn := startMemoryUsageReporting(ctx)
+	swapIn := startSwapUsageReporting(ctx)
 	diskIn := startDiskUsageReporting(ctx)
 
 	go func() {
