@@ -55,7 +55,7 @@ func reportCpuUsage(cpuChannel chan cpuInfo) (requestedPauseTime time.Duration) 
 		Cores: cpuUsages,
 	}
 
-	return 2 * time.Now().Sub(startTime)
+	return 2 * time.Since(startTime)
 }
 
 func startLoadAverageReporting(ctx context.Context) chan loadInfo {
@@ -99,5 +99,5 @@ func reportLoadAverage(loadChannel chan loadInfo) (requestedPauseTime time.Durat
 		Load15: load.Load15,
 	}
 
-	return 2 * time.Now().Sub(startTime)
+	return 2 * time.Since(startTime)
 }

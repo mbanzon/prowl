@@ -77,7 +77,7 @@ func reportMemoryUsage(memoryChannel chan memoryInfo) time.Duration {
 		UsedPercent: memory.UsedPercent,
 	}
 
-	return 2 * time.Now().Sub(startTime)
+	return 2 * time.Since(startTime)
 }
 
 func reportSwapUsage(swapChannel chan memoryInfo) time.Duration {
@@ -94,5 +94,5 @@ func reportSwapUsage(swapChannel chan memoryInfo) time.Duration {
 		UsedPercent: swap.UsedPercent,
 	}
 
-	return 2 * time.Now().Sub(startTime)
+	return 2 * time.Since(startTime)
 }

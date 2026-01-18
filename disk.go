@@ -64,5 +64,5 @@ func reportDiskUsage(diskChannel chan []diskInfo) time.Duration {
 
 	diskChannel <- disks
 
-	return 2 * time.Now().Sub(startTime)
+	return 2 * time.Since(startTime)
 }
