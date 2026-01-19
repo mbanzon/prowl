@@ -26,7 +26,7 @@ func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
 				log.Println("CPU reporting stopped")
 				return
 			case <-time.After(minimumPauseTime):
-				requestedPauseTime := reportCpuUsage(cpuChannel)
+				requestedPauseTime := reportCpuUsage(cpuChannel, cpu.Percent)
 				if requestedPauseTime > minimumPauseTime {
 					minimumPauseTime = requestedPauseTime
 				}
@@ -37,21 +37,28 @@ func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
 	return cpuChannel
 }
 
-func reportCpuUsage(cpuChannel chan cpuInfo) (requestedPauseTime time.Duration) {
+func reportCpuUsage(cpuChannel chan cpuInfo, percent func(time.Duration, bool) ([]float64, error)) (requestedPauseTime time.Duration) {
 	startTime := time.Now()
 
-	cpuUsages, err := cpu.Percent(0, true)
+	cpuUsages, err := percent(0, true)
 	if err != nil {
 		log.Println("error getting CPU usage:", err)
 	}
 
-	combinedUsage, err := cpu.Percent(0, false)
+	combinedUsage, err := percent(0, false)
 	if err != nil {
 		log.Println("error getting CPU usage:", err)
+	}
+
+	usage := 0.0
+	if len(combinedUsage) > 0 {
+		usage = combinedUsage[0]
+	} else {
+		log.Println("error getting CPU usage: empty combined usage")
 	}
 
 	cpuChannel <- cpuInfo{
-		Usage: combinedUsage[0],
+		Usage: usage,
 		Cores: cpuUsages,
 	}
 
