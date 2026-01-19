@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type wgKeyType string
@@ -15,6 +16,7 @@ type wgKeyType string
 const (
 	wgKey        wgKeyType = "waitGroup"
 	secretKeyEnv string    = "PROWL_SECRET"
+	shutdownTimeout        = 10 * time.Second
 )
 
 func main() {
@@ -37,13 +39,17 @@ func main() {
 	wg.Wait() // wait for all goroutines to finish
 
 	// shutdown the server
-	shutdownCtx, shutdownCancel := context.WithCancel(context.Background())
+	shutdownCtx, shutdownCancel := shutdownContext()
 	defer shutdownCancel()
 
 	err := server.Shutdown(shutdownCtx)
 	if err != nil {
 		log.Println("error shutting down server:", err)
 	}
+}
+
+func shutdownContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), shutdownTimeout)
 }
 
 func setupSync() (chan os.Signal, context.Context, context.CancelFunc, *sync.WaitGroup) {
