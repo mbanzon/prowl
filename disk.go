@@ -9,6 +9,11 @@ import (
 	"github.com/shirou/gopsutil/disk"
 )
 
+var (
+	diskPartitions = disk.Partitions
+	diskUsage      = disk.Usage
+)
+
 func startDiskUsageReporting(ctx context.Context) chan []diskInfo {
 	minimumPauseTime := 5 * time.Second
 	diskChannel := make(chan []diskInfo)
@@ -40,7 +45,7 @@ func startDiskUsageReporting(ctx context.Context) chan []diskInfo {
 
 func reportDiskUsage(diskChannel chan []diskInfo) time.Duration {
 	startTime := time.Now()
-	partitions, err := disk.Partitions(false)
+	partitions, err := diskPartitions(false)
 	if err != nil {
 		log.Println("error getting disk partitions:", err)
 	}
@@ -48,17 +53,25 @@ func reportDiskUsage(diskChannel chan []diskInfo) time.Duration {
 	disks := []diskInfo{}
 
 	for _, part := range partitions {
-		usageStat, err := disk.Usage(part.Mountpoint)
+		usageStat, err := diskUsage(part.Mountpoint)
 		if err != nil {
 			log.Println("error getting disk usage:", err)
+		}
+		total := uint64(0)
+		free := uint64(0)
+		used := uint64(0)
+		if usageStat != nil {
+			total = usageStat.Total
+			free = usageStat.Free
+			used = usageStat.Used
 		}
 
 		disks = append(disks, diskInfo{
 			Device:     part.Device,
 			Mountpoint: part.Mountpoint,
-			Total:      usageStat.Total,
-			Free:       usageStat.Free,
-			Used:       usageStat.Used,
+			Total:      total,
+			Free:       free,
+			Used:       used,
 		})
 	}
 

@@ -9,6 +9,11 @@ import (
 	"github.com/shirou/gopsutil/mem"
 )
 
+var (
+	virtualMemory = mem.VirtualMemory
+	swapMemory    = mem.SwapMemory
+)
+
 func startMemoryUsageReporting(ctx context.Context) chan memoryInfo {
 	minimumPauseTime := 1 * time.Second
 	memoryChannel := make(chan memoryInfo)
@@ -65,9 +70,12 @@ func startSwapUsageReporting(ctx context.Context) chan memoryInfo {
 
 func reportMemoryUsage(memoryChannel chan memoryInfo) time.Duration {
 	startTime := time.Now()
-	memory, err := mem.VirtualMemory()
+	memory, err := virtualMemory()
 	if err != nil {
 		log.Println("error getting memory usage:", err)
+	}
+	if memory == nil {
+		memory = &mem.VirtualMemoryStat{}
 	}
 
 	memoryChannel <- memoryInfo{
@@ -82,9 +90,12 @@ func reportMemoryUsage(memoryChannel chan memoryInfo) time.Duration {
 
 func reportSwapUsage(swapChannel chan memoryInfo) time.Duration {
 	startTime := time.Now()
-	swap, err := mem.SwapMemory()
+	swap, err := swapMemory()
 	if err != nil {
 		log.Println("error getting swap usage:", err)
+	}
+	if swap == nil {
+		swap = &mem.SwapMemoryStat{}
 	}
 
 	swapChannel <- memoryInfo{

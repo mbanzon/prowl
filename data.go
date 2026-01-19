@@ -42,17 +42,25 @@ type diskInfo struct {
 	Used       uint64 `json:"used"`
 }
 
+var (
+	cpuUsageReporter    = startCpuUsageReporting
+	loadAverageReporter = startLoadAverageReporting
+	memoryUsageReporter = startMemoryUsageReporting
+	swapUsageReporter   = startSwapUsageReporting
+	diskUsageReporter   = startDiskUsageReporting
+)
+
 func handleData(ctx context.Context) chan output {
 	out := make(chan output)
 	data := output{}
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
 	wg.Add(1)
 
-	cpuIn := startCpuUsageReporting(ctx)
-	loadIn := startLoadAverageReporting(ctx)
-	memoryIn := startMemoryUsageReporting(ctx)
-	swapIn := startSwapUsageReporting(ctx)
-	diskIn := startDiskUsageReporting(ctx)
+	cpuIn := cpuUsageReporter(ctx)
+	loadIn := loadAverageReporter(ctx)
+	memoryIn := memoryUsageReporter(ctx)
+	swapIn := swapUsageReporter(ctx)
+	diskIn := diskUsageReporter(ctx)
 
 	go func() {
 		log.Println("Data handling started")
