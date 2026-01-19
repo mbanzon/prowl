@@ -6,10 +6,7 @@ import (
 )
 
 func TestReportCpuUsageGuardsEmptyCombinedUsage(t *testing.T) {
-	original := cpuPercent
-	defer func() { cpuPercent = original }()
-
-	cpuPercent = func(d time.Duration, percpu bool) ([]float64, error) {
+	stubPercent := func(d time.Duration, percpu bool) ([]float64, error) {
 		if percpu {
 			return []float64{12.5, 33.3}, nil
 		}
@@ -17,7 +14,7 @@ func TestReportCpuUsageGuardsEmptyCombinedUsage(t *testing.T) {
 	}
 
 	ch := make(chan cpuInfo, 1)
-	reportCpuUsage(ch)
+	reportCpuUsage(ch, stubPercent)
 
 	got := <-ch
 	if got.Usage != 0 {
