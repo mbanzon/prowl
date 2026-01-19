@@ -10,6 +10,8 @@ import (
 	"github.com/shirou/gopsutil/load"
 )
 
+var cpuPercent = cpu.Percent
+
 func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
 	minimumPauseTime := 1 * time.Second
 	cpuChannel := make(chan cpuInfo)
@@ -40,18 +42,25 @@ func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
 func reportCpuUsage(cpuChannel chan cpuInfo) (requestedPauseTime time.Duration) {
 	startTime := time.Now()
 
-	cpuUsages, err := cpu.Percent(0, true)
+	cpuUsages, err := cpuPercent(0, true)
 	if err != nil {
 		log.Println("error getting CPU usage:", err)
 	}
 
-	combinedUsage, err := cpu.Percent(0, false)
+	combinedUsage, err := cpuPercent(0, false)
 	if err != nil {
 		log.Println("error getting CPU usage:", err)
+	}
+
+	usage := 0.0
+	if len(combinedUsage) > 0 {
+		usage = combinedUsage[0]
+	} else {
+		log.Println("error getting CPU usage: empty combined usage")
 	}
 
 	cpuChannel <- cpuInfo{
-		Usage: combinedUsage[0],
+		Usage: usage,
 		Cores: cpuUsages,
 	}
 
