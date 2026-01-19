@@ -29,16 +29,10 @@ func TestReportCpuUsageGuardsEmptyCombinedUsage(t *testing.T) {
 }
 
 func TestReportLoadAverageHandlesNilStat(t *testing.T) {
-	originalLoadAvg := loadAvg
-	loadAvg = func() (*load.AvgStat, error) {
-		return nil, errors.New("boom")
-	}
-	t.Cleanup(func() {
-		loadAvg = originalLoadAvg
-	})
-
 	ch := make(chan loadInfo, 1)
-	reportLoadAverage(ch)
+	reportLoadAverage(ch, func() (*load.AvgStat, error) {
+		return nil, errors.New("boom")
+	})
 
 	got := <-ch
 	if got.Load1 != 0 || got.Load5 != 0 || got.Load15 != 0 {

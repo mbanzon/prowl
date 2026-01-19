@@ -10,8 +10,6 @@ import (
 	"github.com/shirou/gopsutil/load"
 )
 
-var loadAvg = load.Avg
-
 func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
 	minimumPauseTime := 1 * time.Second
 	cpuChannel := make(chan cpuInfo)
@@ -83,7 +81,7 @@ func startLoadAverageReporting(ctx context.Context) chan loadInfo {
 				log.Println("Load average reporting stopped")
 				return
 			case <-time.After(minimumPauseTime):
-				requestedPauseTime := reportLoadAverage(loadChannel)
+				requestedPauseTime := reportLoadAverage(loadChannel, load.Avg)
 				if requestedPauseTime > minimumPauseTime {
 					minimumPauseTime = requestedPauseTime
 				}
@@ -94,10 +92,10 @@ func startLoadAverageReporting(ctx context.Context) chan loadInfo {
 	return loadChannel
 }
 
-func reportLoadAverage(loadChannel chan loadInfo) (requestedPauseTime time.Duration) {
+func reportLoadAverage(loadChannel chan loadInfo, avg func() (*load.AvgStat, error)) (requestedPauseTime time.Duration) {
 	startTime := time.Now()
 
-	loadStat, err := loadAvg()
+	loadStat, err := avg()
 	if err != nil {
 		log.Println("error getting load average:", err)
 	}
