@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 func startMemoryUsageReporting(ctx context.Context) chan memoryInfo {

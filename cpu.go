@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/load"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/load"
 )
 
 func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
