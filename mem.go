@@ -64,10 +64,17 @@ func startSwapUsageReporting(ctx context.Context) chan memoryInfo {
 }
 
 func reportMemoryUsage(memoryChannel chan memoryInfo) time.Duration {
+	return reportMemoryUsageWith(memoryChannel, mem.VirtualMemory)
+}
+
+func reportMemoryUsageWith(memoryChannel chan memoryInfo, virtualMemory func() (*mem.VirtualMemoryStat, error)) time.Duration {
 	startTime := time.Now()
-	memory, err := mem.VirtualMemory()
+	memory, err := virtualMemory()
 	if err != nil {
 		log.Println("error getting memory usage:", err)
+	}
+	if memory == nil {
+		memory = &mem.VirtualMemoryStat{}
 	}
 
 	memoryChannel <- memoryInfo{
@@ -81,10 +88,17 @@ func reportMemoryUsage(memoryChannel chan memoryInfo) time.Duration {
 }
 
 func reportSwapUsage(swapChannel chan memoryInfo) time.Duration {
+	return reportSwapUsageWith(swapChannel, mem.SwapMemory)
+}
+
+func reportSwapUsageWith(swapChannel chan memoryInfo, swapMemory func() (*mem.SwapMemoryStat, error)) time.Duration {
 	startTime := time.Now()
-	swap, err := mem.SwapMemory()
+	swap, err := swapMemory()
 	if err != nil {
 		log.Println("error getting swap usage:", err)
+	}
+	if swap == nil {
+		swap = &mem.SwapMemoryStat{}
 	}
 
 	swapChannel <- memoryInfo{
