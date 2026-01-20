@@ -93,17 +93,24 @@ func startLoadAverageReporting(ctx context.Context) chan loadInfo {
 }
 
 func reportLoadAverage(loadChannel chan loadInfo) (requestedPauseTime time.Duration) {
+	return reportLoadAverageWith(loadChannel, load.Avg)
+}
+
+func reportLoadAverageWith(loadChannel chan loadInfo, avg func() (*load.AvgStat, error)) (requestedPauseTime time.Duration) {
 	startTime := time.Now()
 
-	load, err := load.Avg()
+	loadAvg, err := avg()
 	if err != nil {
 		log.Println("error getting load average:", err)
 	}
+	if loadAvg == nil {
+		loadAvg = &load.AvgStat{}
+	}
 
 	loadChannel <- loadInfo{
-		Load1:  load.Load1,
-		Load5:  load.Load5,
-		Load15: load.Load15,
+		Load1:  loadAvg.Load1,
+		Load5:  loadAvg.Load5,
+		Load15: loadAvg.Load15,
 	}
 
 	return 2 * time.Since(startTime)

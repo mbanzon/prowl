@@ -39,18 +39,25 @@ func startDiskUsageReporting(ctx context.Context) chan []diskInfo {
 }
 
 func reportDiskUsage(diskChannel chan []diskInfo) time.Duration {
+	return reportDiskUsageWith(diskChannel, disk.Partitions, disk.Usage)
+}
+
+func reportDiskUsageWith(diskChannel chan []diskInfo, partitions func(bool) ([]disk.PartitionStat, error), usage func(string) (*disk.UsageStat, error)) time.Duration {
 	startTime := time.Now()
-	partitions, err := disk.Partitions(false)
+	diskPartitions, err := partitions(false)
 	if err != nil {
 		log.Println("error getting disk partitions:", err)
 	}
 
 	disks := []diskInfo{}
 
-	for _, part := range partitions {
-		usageStat, err := disk.Usage(part.Mountpoint)
+	for _, part := range diskPartitions {
+		usageStat, err := usage(part.Mountpoint)
 		if err != nil {
 			log.Println("error getting disk usage:", err)
+		}
+		if usageStat == nil {
+			usageStat = &disk.UsageStat{}
 		}
 
 		disks = append(disks, diskInfo{
