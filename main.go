@@ -14,9 +14,9 @@ import (
 type wgKeyType string
 
 const (
-	wgKey        wgKeyType = "waitGroup"
-	secretKeyEnv string    = "PROWL_SECRET"
-	shutdownTimeout        = 10 * time.Second
+	wgKey           wgKeyType = "waitGroup"
+	secretKeyEnv    string    = "PROWL_SECRET"
+	shutdownTimeout           = 10 * time.Second
 )
 
 func main() {
@@ -68,12 +68,20 @@ func setupSync() (chan os.Signal, context.Context, context.CancelFunc, *sync.Wai
 }
 
 func validatePort(port int) {
+	validatePortWith(port, log.Fatal)
+}
+
+func validatePortWith(port int, fatalf func(...any)) {
 	if port < 1024 {
-		log.Fatal("port number must be greater than 1024:", port)
+		fatalf("port number must be greater than 1024:", port)
 	}
 }
 
 func validateProtection(protected bool, key string) string {
+	return validateProtectionWith(protected, key, os.Getenv, log.Fatal)
+}
+
+func validateProtectionWith(protected bool, key string, getenv func(string) string, fatalf func(...any)) string {
 	if !protected {
 		return ""
 	}
@@ -82,11 +90,11 @@ func validateProtection(protected bool, key string) string {
 		return key
 	}
 
-	envSecret := os.Getenv(secretKeyEnv)
+	envSecret := getenv(secretKeyEnv)
 	if envSecret != "" {
 		return envSecret
 	}
 
-	log.Fatal("no secret given with protection enabled")
+	fatalf("no secret given with protection enabled")
 	return ""
 }

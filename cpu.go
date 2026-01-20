@@ -11,6 +11,10 @@ import (
 )
 
 func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
+	return startCpuUsageReportingWith(ctx, cpu.Percent, time.After)
+}
+
+func startCpuUsageReportingWith(ctx context.Context, percent func(time.Duration, bool) ([]float64, error), after func(time.Duration) <-chan time.Time) chan cpuInfo {
 	minimumPauseTime := 1 * time.Second
 	cpuChannel := make(chan cpuInfo)
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
@@ -25,8 +29,8 @@ func startCpuUsageReporting(ctx context.Context) chan cpuInfo {
 			case <-ctx.Done():
 				log.Println("CPU reporting stopped")
 				return
-			case <-time.After(minimumPauseTime):
-				requestedPauseTime := reportCpuUsage(cpuChannel, cpu.Percent)
+			case <-after(minimumPauseTime):
+				requestedPauseTime := reportCpuUsage(cpuChannel, percent)
 				if requestedPauseTime > minimumPauseTime {
 					minimumPauseTime = requestedPauseTime
 				}
@@ -66,6 +70,10 @@ func reportCpuUsage(cpuChannel chan cpuInfo, percent func(time.Duration, bool) (
 }
 
 func startLoadAverageReporting(ctx context.Context) chan loadInfo {
+	return startLoadAverageReportingWith(ctx, load.Avg, time.After)
+}
+
+func startLoadAverageReportingWith(ctx context.Context, avg func() (*load.AvgStat, error), after func(time.Duration) <-chan time.Time) chan loadInfo {
 	minimumPauseTime := 1 * time.Second
 	loadChannel := make(chan loadInfo)
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
@@ -80,8 +88,8 @@ func startLoadAverageReporting(ctx context.Context) chan loadInfo {
 			case <-ctx.Done():
 				log.Println("Load average reporting stopped")
 				return
-			case <-time.After(minimumPauseTime):
-				requestedPauseTime := reportLoadAverage(loadChannel)
+			case <-after(minimumPauseTime):
+				requestedPauseTime := reportLoadAverageWith(loadChannel, avg)
 				if requestedPauseTime > minimumPauseTime {
 					minimumPauseTime = requestedPauseTime
 				}

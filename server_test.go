@@ -48,3 +48,39 @@ func TestBuildMuxConcurrentCachedDataAccess(t *testing.T) {
 
 	wg.Wait()
 }
+
+func TestBuildMuxRejectsMissingSecret(t *testing.T) {
+	cachedData := &atomic.Value{}
+	cachedData.Store([]byte(`{"time":42}`))
+
+	mux := buildMux("topsecret", cachedData)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status 401, got %d", rec.Code)
+	}
+}
+
+func TestBuildMuxAllowsSecretAndSetsRefresh(t *testing.T) {
+	cachedData := &atomic.Value{}
+	cachedData.Store([]byte(`{"time":99}`))
+
+	mux := buildMux("topsecret", cachedData)
+	req := httptest.NewRequest(http.MethodGet, "/r?secret=topsecret", nil)
+	rec := httptest.NewRecorder()
+
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d", rec.Code)
+	}
+	if got := rec.Header().Get("Refresh"); got != "5" {
+		t.Fatalf("expected Refresh header to be 5, got %q", got)
+	}
+	if got := rec.Body.String(); got != `{"time":99}` {
+		t.Fatalf("unexpected response body: %s", got)
+	}
+}

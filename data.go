@@ -43,16 +43,20 @@ type diskInfo struct {
 }
 
 func handleData(ctx context.Context) chan output {
-	out := make(chan output)
-	data := output{}
-	wg := ctx.Value(wgKey).(*sync.WaitGroup)
-	wg.Add(1)
-
 	cpuIn := startCpuUsageReporting(ctx)
 	loadIn := startLoadAverageReporting(ctx)
 	memoryIn := startMemoryUsageReporting(ctx)
 	swapIn := startSwapUsageReporting(ctx)
 	diskIn := startDiskUsageReporting(ctx)
+
+	return handleDataWithChannels(ctx, cpuIn, loadIn, memoryIn, swapIn, diskIn)
+}
+
+func handleDataWithChannels(ctx context.Context, cpuIn chan cpuInfo, loadIn chan loadInfo, memoryIn chan memoryInfo, swapIn chan memoryInfo, diskIn chan []diskInfo) chan output {
+	out := make(chan output)
+	data := output{}
+	wg := ctx.Value(wgKey).(*sync.WaitGroup)
+	wg.Add(1)
 
 	go func() {
 		log.Println("Data handling started")

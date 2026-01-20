@@ -12,6 +12,12 @@ import (
 const secretKey string = "secret"
 
 func startServer(port int, secret string, in chan output) *http.Server {
+	return startServerWith(port, secret, in, func(server *http.Server) error {
+		return server.ListenAndServe()
+	}, time.Sleep)
+}
+
+func startServerWith(port int, secret string, in chan output, listenAndServe func(*http.Server) error, sleep func(time.Duration)) *http.Server {
 	cachedData := &atomic.Value{}
 	cachedData.Store([]byte("{}"))
 
@@ -41,11 +47,11 @@ func startServer(port int, secret string, in chan output) *http.Server {
 		log.Println("Server started on port", port)
 
 		for {
-			err := server.ListenAndServe()
+			err := listenAndServe(server)
 			if err != nil && err != http.ErrServerClosed {
 				log.Println("Error running server:", err)
 				log.Println("Waiting for 5 seconds before retrying to start server...")
-				time.Sleep(5 * time.Second)
+				sleep(5 * time.Second)
 			} else {
 				log.Println("Server stopped")
 				return
