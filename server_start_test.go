@@ -27,7 +27,7 @@ func TestStartServerWithRetriesAndStops(t *testing.T) {
 		sleepCalled <- struct{}{}
 	}
 
-	server := startServerWith(0, "", in, listen, sleepFn)
+	server := startServerWith(0, "", false, true, in, listen, sleepFn)
 	if server == nil || server.Addr != ":0" {
 		t.Fatalf("expected server with :0 address, got %+v", server)
 	}

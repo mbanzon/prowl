@@ -87,3 +87,31 @@ func handleDataWithChannels(ctx context.Context, cpuIn chan cpuInfo, loadIn chan
 
 	return out
 }
+
+func teeOutput(ctx context.Context, in <-chan output) (chan output, chan output) {
+	outA := make(chan output)
+	outB := make(chan output)
+	wg := ctx.Value(wgKey).(*sync.WaitGroup)
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		defer close(outA)
+		defer close(outB)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case data, ok := <-in:
+				if !ok {
+					return
+				}
+				outA <- data
+				outB <- data
+			}
+		}
+	}()
+
+	return outA, outB
+}
