@@ -10,6 +10,10 @@ import (
 )
 
 func startMemoryUsageReporting(ctx context.Context) chan memoryInfo {
+	return startMemoryUsageReportingWith(ctx, mem.VirtualMemory, time.After)
+}
+
+func startMemoryUsageReportingWith(ctx context.Context, virtualMemory func() (*mem.VirtualMemoryStat, error), after func(time.Duration) <-chan time.Time) chan memoryInfo {
 	minimumPauseTime := 1 * time.Second
 	memoryChannel := make(chan memoryInfo)
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
@@ -24,8 +28,8 @@ func startMemoryUsageReporting(ctx context.Context) chan memoryInfo {
 			case <-ctx.Done():
 				log.Println("Memory reporting stopped")
 				return
-			case <-time.After(minimumPauseTime):
-				requestedPauseTime := reportMemoryUsage(memoryChannel)
+			case <-after(minimumPauseTime):
+				requestedPauseTime := reportMemoryUsageWith(memoryChannel, virtualMemory)
 				if requestedPauseTime > minimumPauseTime {
 					minimumPauseTime = requestedPauseTime
 				}
@@ -37,6 +41,10 @@ func startMemoryUsageReporting(ctx context.Context) chan memoryInfo {
 }
 
 func startSwapUsageReporting(ctx context.Context) chan memoryInfo {
+	return startSwapUsageReportingWith(ctx, mem.SwapMemory, time.After)
+}
+
+func startSwapUsageReportingWith(ctx context.Context, swapMemory func() (*mem.SwapMemoryStat, error), after func(time.Duration) <-chan time.Time) chan memoryInfo {
 	minimumPauseTime := 1 * time.Second
 	swapChannel := make(chan memoryInfo)
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
@@ -51,8 +59,8 @@ func startSwapUsageReporting(ctx context.Context) chan memoryInfo {
 			case <-ctx.Done():
 				log.Println("Swap reporting stopped")
 				return
-			case <-time.After(minimumPauseTime):
-				requestedPauseTime := reportSwapUsage(swapChannel)
+			case <-after(minimumPauseTime):
+				requestedPauseTime := reportSwapUsageWith(swapChannel, swapMemory)
 				if requestedPauseTime > minimumPauseTime {
 					minimumPauseTime = requestedPauseTime
 				}

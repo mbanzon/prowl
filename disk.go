@@ -10,6 +10,10 @@ import (
 )
 
 func startDiskUsageReporting(ctx context.Context) chan []diskInfo {
+	return startDiskUsageReportingWith(ctx, disk.Partitions, disk.Usage, time.After)
+}
+
+func startDiskUsageReportingWith(ctx context.Context, partitions func(bool) ([]disk.PartitionStat, error), usage func(string) (*disk.UsageStat, error), after func(time.Duration) <-chan time.Time) chan []diskInfo {
 	minimumPauseTime := 5 * time.Second
 	diskChannel := make(chan []diskInfo)
 	wg := ctx.Value(wgKey).(*sync.WaitGroup)
@@ -19,15 +23,15 @@ func startDiskUsageReporting(ctx context.Context) chan []diskInfo {
 		log.Println("Disk reporting started")
 		defer wg.Done()
 
-		reportDiskUsage(diskChannel)
+		reportDiskUsageWith(diskChannel, partitions, usage)
 
 		for {
 			select {
 			case <-ctx.Done():
 				log.Println("Disk reporting stopped")
 				return
-			case <-time.After(minimumPauseTime):
-				requestedPauseTime := reportDiskUsage(diskChannel)
+			case <-after(minimumPauseTime):
+				requestedPauseTime := reportDiskUsageWith(diskChannel, partitions, usage)
 				if requestedPauseTime > minimumPauseTime {
 					minimumPauseTime = requestedPauseTime
 				}
