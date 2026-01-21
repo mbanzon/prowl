@@ -3,25 +3,66 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"sync"
 	"sync/atomic"
 	"time"
 )
 
 const secretKey string = "secret"
 
-func startServer(port int, secret string, in chan output) *http.Server {
-	return startServerWith(port, secret, in, func(server *http.Server) error {
+type relayStore struct {
+	local    *atomic.Value
+	machines sync.Map
+}
+
+func newRelayStore() *relayStore {
+	store := &relayStore{
+		local: &atomic.Value{},
+	}
+	store.local.Store([]byte("{}"))
+	return store
+}
+
+func (store *relayStore) set(machine string, data []byte) {
+	if machine == "" {
+		store.local.Store(data)
+		return
+	}
+
+	value, _ := store.machines.LoadOrStore(machine, &atomic.Value{})
+	value.(*atomic.Value).Store(data)
+}
+
+func (store *relayStore) get(machine string) []byte {
+	if machine == "" {
+		return store.local.Load().([]byte)
+	}
+
+	value, ok := store.machines.Load(machine)
+	if !ok {
+		return []byte("{}")
+	}
+
+	return value.(*atomic.Value).Load().([]byte)
+}
+
+func startServer(port int, secret string, relayEnabled bool, relayLocal bool, in chan output) *http.Server {
+	return startServerWith(port, secret, relayEnabled, relayLocal, in, func(server *http.Server) error {
 		return server.ListenAndServe()
 	}, time.Sleep)
 }
 
-func startServerWith(port int, secret string, in chan output, listenAndServe func(*http.Server) error, sleep func(time.Duration)) *http.Server {
-	cachedData := &atomic.Value{}
-	cachedData.Store([]byte("{}"))
+func startServerWith(port int, secret string, relayEnabled bool, relayLocal bool, in chan output, listenAndServe func(*http.Server) error, sleep func(time.Duration)) *http.Server {
+	store := newRelayStore()
 
 	go func() {
+		if in == nil {
+			return
+		}
+
 		data := output{}
 
 		for d := range in {
@@ -31,13 +72,13 @@ func startServerWith(port int, secret string, in chan output, listenAndServe fun
 				log.Println("Error marshalling data:", err)
 				continue
 			}
-			cachedData.Store(jsonData)
+			store.set("", jsonData)
 		}
 
 		log.Println("Server data receiver stopped")
 	}()
 
-	mux := buildMux(secret, cachedData)
+	mux := buildMux(secret, relayEnabled, relayLocal, store)
 	server := &http.Server{
 		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
@@ -62,7 +103,7 @@ func startServerWith(port int, secret string, in chan output, listenAndServe fun
 	return server
 }
 
-func buildMux(secret string, cachedData *atomic.Value) *http.ServeMux {
+func buildMux(secret string, relayEnabled bool, relayLocal bool, store *relayStore) *http.ServeMux {
 	mux := http.NewServeMux()
 
 	secureWrapper := func(f http.HandlerFunc) http.HandlerFunc {
@@ -81,14 +122,52 @@ func buildMux(secret string, cachedData *atomic.Value) *http.ServeMux {
 
 	mux.HandleFunc("/", secureWrapper(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(cachedData.Load().([]byte))
+		machineName := r.URL.Query().Get("machine_name")
+		if relayEnabled && machineName == "" && !relayLocal {
+			http.Error(w, "machine_name is required", http.StatusBadRequest)
+			return
+		}
+		w.Write(store.get(machineName))
 	}))
 
 	mux.HandleFunc("/r", secureWrapper(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Refresh", "5")
-		w.Write(cachedData.Load().([]byte))
+		machineName := r.URL.Query().Get("machine_name")
+		if relayEnabled && machineName == "" && !relayLocal {
+			http.Error(w, "machine_name is required", http.StatusBadRequest)
+			return
+		}
+		w.Write(store.get(machineName))
 	}))
+
+	if relayEnabled {
+		mux.HandleFunc("/relay", secureWrapper(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodPost {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+
+			machineName := r.URL.Query().Get("machine_name")
+			if machineName == "" {
+				http.Error(w, "machine_name is required", http.StatusBadRequest)
+				return
+			}
+
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, "failed to read body", http.StatusBadRequest)
+				return
+			}
+			if !json.Valid(body) {
+				http.Error(w, "invalid json payload", http.StatusBadRequest)
+				return
+			}
+
+			store.set(machineName, body)
+			w.WriteHeader(http.StatusAccepted)
+		}))
+	}
 
 	return mux
 }
